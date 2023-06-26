@@ -4,6 +4,7 @@ defmodule Proj do
   import Assoc.Updater
 
 
+
   @moduledoc """
   Documentation for `Proj`.
   """
@@ -17,6 +18,7 @@ defmodule Proj do
       :world
 
   """
+
   def inserir_habilidade(nome) do
     habilidade = %Proj.Habilidade{nome: nome}
     habilidade |> DB.insert()
@@ -55,7 +57,7 @@ defmodule Proj do
       |> where([membro], membro.nome == ^nome)
       |> preload(:habilidades)
       |> preload(:projeto_respons)
-
+      |> preload(:projetos)
     )
   end
 
@@ -92,20 +94,51 @@ defmodule Proj do
     )
   end
 
+  def buscar_all_tarefas do
+    DB.all(
+      Proj.Tarefa
+      |> select([tarefa], tarefa)
+      |> order_by(asc: :id)
+      |> preload(:membro_respons)
+      |> preload(:proj_associado)
+
+    )
+  end
+
+  def buscar_tarefas_proj(projeto_associado) do
+    DB.one(
+      Proj.Tarefa
+      |> select([tarefa], tarefa)
+      |> where([tarefa], tarefa.projeto_associado == ^projeto_associado)
+      |> preload(:membro_respons)
+      |> preload(:proj_associado)
+    )
+  end
+
   def inserir_projeto(nome, descricao, data_ini, data_term, status, id_responsavel) do
-    projeto = %Proj.Projeto{nome: nome, descricao: descricao, data_ini: data_ini, data_term: data_term, status: status, id_responsavel: id_responsavel}
+    d_ini = converter_data(data_ini)
+    d_term = converter_data(data_term)
+    projeto = %Proj.Projeto{nome: nome, descricao: descricao, data_ini: d_ini, data_term: d_term, status: status, id_responsavel: id_responsavel}
     projeto |> DB.insert()
-    # projj = buscar_proj(nome)
 
-    # params = %{
-    #   membros: [
-    #     %{id: id_responsavel}
-    #   ]
-    # }
+    {:ok, IO.puts("projeto criado")}
+  end
 
-    # update_associations(DB, projj, params)
+  def inserir_tarefa(descricao, data_ini, data_term, status, id_responsavel, id_projeto) do
+    d_ini = converter_data(data_ini)
+    d_term = converter_data(data_term)
 
-    {:ok, IO.puts("habilidade inserida")}
+    tarefa = %Proj.Tarefa{descricao: descricao, data_ini: d_ini, data_term: d_term, status: status, membro_responsavel: id_responsavel, projeto_associado: id_projeto}
+    tarefa |> DB.insert()
+
+    # {:ok, IO.puts("tarefa criada")}
+  end
+
+  def inserir_documento(nome, descricao, versao, id_projeto) do
+    documento = %Proj.Documento{nome: nome, descricao: descricao, versao: versao, projeto_referente: id_projeto}
+    documento |> DB.insert()
+
+    {:ok, IO.puts("documento criado")}
   end
 
   # def ins_projeto(nome, descricao, data_ini, data_term, status, id_responsavel) do
@@ -115,14 +148,24 @@ defmodule Proj do
   # |> update_associations(params)
   # end
 
-  def associar_hab_membro0(habilidade, id_membro) do
+  def associar_hab_membro(nome_habilidade, id_membro) do
+    habilidade = buscar_habilidade(nome_habilidade)
     params = %{
       membros: [
         %{id: id_membro}
       ]
     }
+    update_associations(DB, habilidade, params)
+  end
 
-    update_associations(DB, habilidade , params)
+  def associar_membro_projeto(nome_membro, id_projeto) do
+    membro = buscar_membro(nome_membro)
+    params = %{
+      projetos: [
+        %{id: id_projeto}
+      ]
+    }
+    update_associations(DB,membro,params)
     :ok
   end
 
@@ -146,6 +189,10 @@ defmodule Proj do
     loop()
   end
 
+  defp converter_data(string_data) do
+    [dia, mes, ano] = String.split(string_data, "-") |> Enum.map(&String.to_integer/1)
+    Date.from_erl!({ano, mes, dia})
+  end
   # def atr_hab_membro(membro, habilidade) do
   #   membro
   #   |> membro_changeset = Ecto.Changeset.change(membro)

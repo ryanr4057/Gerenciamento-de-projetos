@@ -1,6 +1,6 @@
 defmodule Proj.Membro do
   use Ecto.Schema
-  # use Assoc.Schema, repo: Proj.Repo
+  use Assoc.Schema, repo: Proj.Repo
 
 
   schema "membros" do
@@ -11,14 +11,19 @@ defmodule Proj.Membro do
     many_to_many(:habilidades, Proj.Habilidade, join_through: "habilidades_membros", on_replace: :delete)
 
     many_to_many(:projetos, Proj.Projeto, join_through: "membros_projetos", on_replace: :delete)
+    has_many(:tarefas, Proj.Tarefa, foreign_key: :membro_responsavel, on_delete: :delete_all, on_replace: :delete)
 
   end
+
+  def updatable_associations, do: [
+    projetos: Proj.Projeto
+
+  ]
 
   def changeset(struct, params \\ %{}) do
     struct
     |> Ecto.Changeset.cast(params, [:nome, :funcao])
     |> Ecto.Changeset.validate_required([:nome])
-    |> Ecto.Changeset.validate_required([:funcao])
   end
 
 end

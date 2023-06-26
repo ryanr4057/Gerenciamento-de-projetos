@@ -11,6 +11,9 @@ defmodule Proj.Projeto do
 
     belongs_to(:responsavel, Proj.Membro, foreign_key: :id_responsavel, on_replace: :update)
     many_to_many(:membros, Proj.Membro, join_through: "membros_projetos", on_replace: :delete)
+    has_many(:tarefas, Proj.Tarefa, foreign_key: :projeto_associado, on_delete: :delete_all, on_replace: :delete)
+    has_many(:documentos, Proj.Documento, foreign_key: :projeto, on_delete: :delete_all, on_replace: :delete)
+
   end
 
   def updatable_associations, do: [
