@@ -22,10 +22,19 @@ defmodule Proj do
 
   def inserir_habilidade(nome) do
     habilidade = %Proj.Habilidade{nome: nome}
-    habilidade |> DB.insert()
+    # habilidade |> DB.insert()
     # IO.puts("\e[2J")
-    {:ok, IO.puts("habilidade cadastrada!")}
-    {:error, IO.puts("erro nos dados, tente novamente")}
+    case DB.insert(habilidade) do
+      {:ok, _} ->
+        IO.puts("Habilidade cadastrada com sucesso")
+        {:ok, :habilidade_criado}
+
+      {:error, _} ->
+        IO.puts("Erro ao cadastrar habilidade, tente novamente")
+        {:error, :erro_habilidade}
+    end
+
+
 
   end
 
@@ -49,10 +58,17 @@ defmodule Proj do
 
   def inserir_membro(nome, funcao) do
     membro = %Proj.Membro{nome: nome, funcao: funcao}
-    membro |> DB.insert()
+    # membro |> DB.insert()
 
-    {:ok, IO.puts("membro cadastrado!")}
-    {:error, IO.puts("erro nos dados, tente novamente")}
+    case DB.insert(membro) do
+      {:ok, _} ->
+        IO.puts("Membro cadastrado com sucesso")
+        {:ok, :membro_criado}
+
+      {:error, _} ->
+        IO.puts("Erro ao cadastrar membro, tente novamente")
+        {:error, :erro_membro}
+    end
   end
 
   def buscar_membro(nome) do
@@ -84,27 +100,49 @@ defmodule Proj do
     id_membro
   end
 
-  defp buscar_all_membros do
+  def buscar_all_membros do
     membros = DB.all(
       Proj.Membro
       |> select([membro], membro)
       |> order_by(asc: :id)
       |> preload(:habilidades)
+      |> preload(:projetos)
+
     )
     Enum.each(membros, fn membro ->
-      habilidades = Enum.map(membro.habilidades, &(&1.nome))
-      IO.puts("Nome: #{membro.nome}, Funcao: #{membro.funcao}, Habilidades: #{inspect(habilidades)}")
+      # habilidades = Enum.map(membro.habilidades, &(&1.nome))
+
+      habilidades = membro.habilidades
+      |> Enum.map(fn habilidade -> Map.get(habilidade, :nome) |> String.trim end)
+      |> Enum.join(", ")
+
+      projetos = membro.projetos
+      |> Enum.map(fn projeto -> Map.get(projeto, :nome) |> String.trim end)
+      |> Enum.join(", ")
+
+      IO.puts("Nome: #{membro.nome} \nFuncao: #{membro.funcao} \nHabilidades: #{habilidades} \nProjetos: #{projetos} \n")
+      IO.puts("")
     end)
 
   end
 
   def buscar_all_projetos do
-    DB.all(
+    projetos = DB.all(
       Proj.Projeto
       |> select([projeto], projeto)
       |> order_by(asc: :id)
       |> preload(:membros)
+      |> preload(:documentos)
+      |> preload(:responsavel)
     )
+    Enum.each(projetos, fn projeto ->
+      membros = projeto.membros
+      |> Enum.map(fn membro -> Map.get(membro, :nome) |> String.trim end)
+      |> Enum.join(", ")
+      responsavel = projeto.responsavel |> Map.get(:nome) |> String.trim |> String.replace("\"", "")
+      IO.puts("Nome do Projeto: #{projeto.nome} \nDescricao: #{projeto.descricao} \nData inicial: #{projeto.data_ini} \nData termino prevista: #{projeto.data_term} \nStatus: #{projeto.status} \nResponsavel: #{responsavel}\nMembros: #{membros} \n")
+      IO.puts("")
+    end)
   end
 
   def buscar_all_tarefas do
@@ -132,10 +170,18 @@ defmodule Proj do
     d_ini = converter_data(data_ini)
     d_term = converter_data(data_term)
     projeto = %Proj.Projeto{nome: nome, descricao: descricao, data_ini: d_ini, data_term: d_term, status: status, id_responsavel: id_responsavel}
-    projeto |> DB.insert()
+    # projeto |> DB.insert()
 
-    {:ok, IO.puts("projeto criado")}
-    {:error, IO.puts("erro nos dados, tente novamente")}
+
+    case DB.insert(projeto) do
+      {:ok, _} ->
+        IO.puts("Projeto criado com sucesso")
+        {:ok, :projeto_criado}
+
+      {:error, _} ->
+        IO.puts("Erro ao criar projeto, tente novamente")
+        {:error, :erro_projeto}
+    end
 
   end
 
@@ -144,19 +190,33 @@ defmodule Proj do
     d_term = converter_data(data_term)
 
     tarefa = %Proj.Tarefa{descricao: descricao, data_ini: d_ini, data_term: d_term, status: status, membro_responsavel: id_responsavel, projeto_associado: id_projeto}
-    tarefa |> DB.insert()
+    # tarefa |> DB.insert()
 
-    {:ok, IO.puts("tarefa criada")}
-    {:error, IO.puts("erro nos dados, tente novamente")}
+    case DB.insert(tarefa) do
+      {:ok, _} ->
+        IO.puts("Tarefa criada com sucesso")
+        {:ok, :tarefa_criado}
+
+      {:error, _} ->
+        IO.puts("Erro ao criar tarefa, tente novamente")
+        {:error, :erro_tarefa}
+    end
 
   end
 
   def inserir_documento(nome, descricao, versao, id_projeto) do
-    documento = %Proj.Documento{nome: nome, descricao: descricao, versao: versao, projeto_referente: id_projeto}
-    documento |> DB.insert()
+    documento = %Proj.Documento{nome: nome, descricao: descricao, versao: versao, projeto: id_projeto}
+    # documento |> DB.insert()
+    case DB.insert(documento) do
+      {:ok, _} ->
+        IO.puts("Documento criado com sucesso")
+        {:ok, :documento_criado}
 
-    {:ok, IO.puts("documento criado")}
-    {:error, IO.puts("erro nos dados, tente novamente")}
+      {:error, _} ->
+        IO.puts("Erro ao inserir o documento, tente novamente")
+        {:error, :erro_documento}
+    end
+
   end
 
   # def ins_projeto(nome, descricao, data_ini, data_term, status, id_responsavel) do
@@ -174,9 +234,16 @@ defmodule Proj do
       ]
     }
 
-    update_associations(DB, habilidade, params)
-    {:ok, IO.puts("habilidade atribuida!")}
-    {:error, IO.puts("erro na atribuicao, tente novamente")}
+    case update_associations(DB, habilidade, params) do
+      {:ok, _} ->
+        IO.puts("Habilidade atribuida com sucesso")
+        {:ok, :habilidade_assoc}
+
+      {:error, _} ->
+        IO.puts("Erro ao atribuir a habilidade, tente novamente")
+        {:error, :erro_habilidade_assoc}
+    end
+
   end
 
 
@@ -186,9 +253,16 @@ defmodule Proj do
       projetos: [ %{id: id_projeto}]
     }
 
-    update_associations(DB,membro,params)
-    {:ok, IO.puts("membro atribuido!")}
-    {:error, IO.puts("erro na atribuicao, tente novamente")}
+    case update_associations(DB,membro,params) do
+      {:ok, _} ->
+        IO.puts("Membero atribuido com sucesso")
+        {:ok, :membro_assoc}
+
+      {:error, _} ->
+        IO.puts("Erro ao atribuir o membro, tente novamente")
+        {:error, :erro_membro_assoc}
+    end
+
   end
 
   def main do
@@ -205,7 +279,7 @@ defmodule Proj do
 
     case choice do
       "1" -> menu_cadastros()
-      "2" -> buscar_all_membros()
+      "2" -> menu_buscas()
       "0" -> exit(:normal)
       _ -> IO.puts("Opção invalida. Tente novamente.")
     end
@@ -291,6 +365,31 @@ defmodule Proj do
     end
 
     menu_cadastros()
+  end
+
+  @spec menu_buscas() :: no_return
+  defp menu_buscas() do
+    IO.puts("BUSCAS")
+    IO.puts("-------------------------")
+    IO.puts("MENU")
+    IO.puts("1- BUSCAR TODOS OS PROJETOS")
+    IO.puts("2- BUSCAR TODOS OS MEMBROS")
+    IO.puts("3- BUSCAR TODAS AS HABILIDADES")
+    IO.puts("4- BUSCAR TODAS AS TAREFAS")
+    IO.puts("5- BUSCAR MEMBROS COM UMA HABILIDADE")
+    IO.puts("6- BUSCAR PROJETOS DE UM MEMBRO")
+    IO.puts("7- BUSCAR MEMBROS DE UM PROJETO")
+    IO.puts("8- BUSCAR DOCUMENTOS DE UM PROJETO")
+    IO.puts("9- BUSCAR PROJETOS POR STATUS")
+    IO.puts("10- BUSCAR TAREFAS CONCLUIDAS DE UM PROJETO")
+    IO.puts("11- BUSCAR PROJETOS ATRASADOS")
+    IO.puts("12- VOLTAR")
+    op1 = IO.gets(" ") |> String.trim
+
+    case op1 do
+      "1" -> buscar_all_projetos()
+    end
+
   end
 
   defp converter_data(string_data) do
