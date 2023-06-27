@@ -38,21 +38,12 @@ defmodule Proj do
 
   end
 
-
   def buscar_habilidade(nome) do
     DB.one(
       Proj.Habilidade
       |> select([habilidade], habilidade)
       |> where([habilidade], habilidade.nome == ^nome)
       |> preload(:membros)
-    )
-  end
-
-  def buscar_all_habilidades do
-    DB.all(
-      Proj.Habilidade
-      |> select([habilidade], {habilidade.nome})
-      |> order_by(desc: :inserted_at)
     )
   end
 
@@ -82,7 +73,15 @@ defmodule Proj do
     )
   end
 
-  defp buscar_proj_id(nome) do
+  def buscar_projeto(nome) do
+    DB.one(
+      Proj.Membro
+      |> select([projeto], projeto)
+      |> where([projeto], projeto.nome == ^nome)
+    )
+  end
+
+  def buscar_proj_id(nome) do
     id_projeto = DB.one(
       Proj.Projeto
       |> select([projeto], projeto.id)
@@ -91,9 +90,9 @@ defmodule Proj do
     id_projeto
   end
 
-  defp buscar_membro_id(nome) do
+  def buscar_membro_id(nome) do
     id_membro = DB.one(
-      Proj.Projeto
+      Proj.Membro
       |> select([membro], membro.id)
       |> where([membro], membro.nome == ^nome)
     )
@@ -109,8 +108,9 @@ defmodule Proj do
       |> preload(:projetos)
 
     )
+    IO.puts("MEMBROS")
+    IO.puts("-------------------------")
     Enum.each(membros, fn membro ->
-      # habilidades = Enum.map(membro.habilidades, &(&1.nome))
 
       habilidades = membro.habilidades
       |> Enum.map(fn habilidade -> Map.get(habilidade, :nome) |> String.trim end)
@@ -126,6 +126,20 @@ defmodule Proj do
 
   end
 
+  def buscar_all_habilidades do
+    habilidades = DB.all(
+      Proj.Habilidade
+      |> select([habilidade], habilidade)
+      |> order_by(asc: :id)
+    )
+    IO.puts("HABILIDADES")
+    IO.puts("-------------------------")
+    Enum.each(habilidades, fn habilidade ->
+      IO.puts("Id: #{habilidade.id} Nome: #{habilidade.nome}")
+    end)
+
+  end
+
   def buscar_all_projetos do
     projetos = DB.all(
       Proj.Projeto
@@ -135,6 +149,8 @@ defmodule Proj do
       |> preload(:documentos)
       |> preload(:responsavel)
     )
+    IO.puts("PROJETOS")
+    IO.puts("-------------------------")
     Enum.each(projetos, fn projeto ->
       membros = projeto.membros
       |> Enum.map(fn membro -> Map.get(membro, :nome) |> String.trim end)
@@ -146,33 +162,172 @@ defmodule Proj do
   end
 
   def buscar_all_tarefas do
-    DB.all(
+    tarefas = DB.all(
       Proj.Tarefa
       |> select([tarefa], tarefa)
       |> order_by(asc: :id)
       |> preload(:membro_respons)
       |> preload(:proj_associado)
-
     )
+    IO.puts("TAREFAS")
+    IO.puts("-------------------------")
+    Enum.each(tarefas, fn tarefa ->
+      responsavel = tarefa.membro_respons |> Map.get(:nome) |> String.trim |> String.replace("\"", "")
+      projet = tarefa.proj_associado |> Map.get(:nome) |> String.trim |> String.replace("\"", "")
+      IO.puts("Descricao: #{tarefa.descricao} \nData inicial: #{tarefa.data_ini} \nData termino prevista: #{tarefa.data_term} \nStatus: #{tarefa.status} \nResponsavel: #{responsavel}\nProjeto: #{projet} \n")
+      IO.puts("")
+    end)
   end
 
-  def buscar_tarefas_proj(projeto_associado) do
-    DB.one(
+  def buscar_membros_hab(nome_habil) do
+    habilidade = DB.one(
+      Proj.Habilidade
+      |> select([habilidade], habilidade)
+      |> where([habilidade], habilidade.nome == ^nome_habil)
+      |> order_by(asc: :id)
+      |> preload(:membros)
+    )
+    IO.puts("MEMBROS COM A HABILIDADE: #{nome_habil}")
+    IO.puts("-------------------------")
+    membros = habilidade.membros
+    |> Enum.map(fn membro -> Map.get(membro, :nome) |> String.trim end)
+    |> Enum.join(", ")
+    IO.puts("Membros: #{membros} \n")
+    IO.puts("")
+  end
+
+  def buscar_projetos_membro(nome_membro) do
+    membro = DB.one(
+      Proj.Membro
+      |> select([membro], membro)
+      |> where([membro], membro.nome == ^nome_membro)
+      |> order_by(asc: :id)
+      |> preload(:projetos)
+    )
+    IO.puts("PROJETOS DO MEMBRO: #{nome_membro}")
+    IO.puts("-------------------------")
+    projetos = membro.projetos
+    |> Enum.map(fn projeto -> Map.get(projeto, :nome) |> String.trim end)
+    |> Enum.join(", ")
+    IO.puts("Projetos: #{projetos} \n")
+    IO.puts("")
+
+  end
+
+  def buscar_membros_projeto(nome_proj) do
+    projeto = DB.one(
+      Proj.Projeto
+      |> select([projeto], projeto)
+      |> where([projeto], projeto.nome == ^nome_proj)
+      |> order_by(asc: :id)
+      |> preload(:membros)
+    )
+    IO.puts("MEMBROS DO PROJETO: #{nome_proj}")
+    IO.puts("-------------------------")
+    membros = projeto.membros
+    |> Enum.map(fn membro -> Map.get(membro, :nome) |> String.trim end)
+    |> Enum.join(", ")
+    IO.puts("Membros: #{membros} \n")
+    IO.puts("")
+  end
+
+  def buscar_documentos_projeto(nome_proj) do
+    projeto = DB.one(
+      Proj.Projeto
+      |> select([projeto], projeto)
+      |> where([projeto], projeto.nome == ^nome_proj)
+      |> order_by(asc: :id)
+      |> preload(:documentos)
+    )
+    IO.puts("DOCUMENTOS DO PROJETO: #{nome_proj}")
+    IO.puts("-------------------------")
+    documentos = projeto.documentos
+    |> Enum.map(fn documento -> Map.get(documento, :nome) |> String.trim end)
+    |> Enum.join(", ")
+    IO.puts("Documentos: #{documentos} \n")
+    IO.puts("")
+  end
+
+  def buscar_projetos_status(status) do
+    projetos = DB.all(
+      Proj.Projeto
+      |> select([projeto], projeto)
+      |> where([projeto], projeto.status == ^status)
+      |> order_by(asc: :id)
+      |> preload(:responsavel)
+    )
+    IO.puts("PROJETOS COM O STATUS: #{status}")
+    IO.puts("-------------------------")
+    Enum.each(projetos, fn projeto ->
+      responsavel = projeto.responsavel |> Map.get(:nome) |> String.trim |> String.replace("\"", "")
+      IO.puts("Nome do Projeto: #{projeto.nome} \nData inicial: #{projeto.data_ini} \nResponsavel: #{responsavel}\n")
+      IO.puts("")
+    end)
+  end
+
+  def buscar_taref_conc_proj(nome_proj) do
+    proj_id = buscar_proj_id(nome_proj)
+    tarefas = DB.all(
       Proj.Tarefa
       |> select([tarefa], tarefa)
-      |> where([tarefa], tarefa.projeto_associado == ^projeto_associado)
+      |> where([tarefa], tarefa.status == "concluida")
+      |> where([tarefa], tarefa.projeto_associado == ^proj_id)
+      |> order_by(asc: :id)
       |> preload(:membro_respons)
-      |> preload(:proj_associado)
+
     )
+    IO.puts("TAREFAS CONCLUIDAS DO PROJETO: #{nome_proj}")
+    IO.puts("-------------------------")
+    Enum.each(tarefas, fn tarefa ->
+      responsavel = tarefa.membro_respons |> Map.get(:nome) |> String.trim |> String.replace("\"", "")
+      IO.puts("Descricao: #{tarefa.descricao} \nData inicial: #{tarefa.data_ini} \nData termino prevista: #{tarefa.data_term} \nResponsavel: #{responsavel}\n")
+      IO.puts("")
+    end)
+  end
+
+  def buscar_projetos_atras() do
+    data_atual = obter_data_atual()
+    projetos = DB.all(
+      Proj.Projeto
+      |> select([projeto], projeto)
+      |> where([projeto], projeto.status == "em andamento")
+      |> where([projeto], projeto.data_term < ^data_atual)
+
+      |> order_by(asc: :id)
+      |> preload(:responsavel)
+    )
+    IO.puts("PROJETOS ATRASADOS")
+    IO.puts("-------------------------")
+    Enum.each(projetos, fn projeto ->
+      responsavel = projeto.responsavel |> Map.get(:nome) |> String.trim |> String.replace("\"", "")
+      IO.puts("Nome do Projeto: #{projeto.nome} \nData inicial: #{projeto.data_ini} \nData termino previsto: #{projeto.data_term} \nResponsavel: #{responsavel}\n")
+      IO.puts("")
+    end)
+  end
+
+  def buscar_tarefas_proj(nome_proj) do
+    proj_id = buscar_proj_id(nome_proj)
+    tarefas = DB.all(
+      Proj.Tarefa
+      |> select([tarefa], tarefa)
+      |> where([tarefa], tarefa.projeto_associado == ^proj_id)
+      |> order_by(asc: :id)
+      |> preload(:membro_respons)
+
+    )
+    IO.puts("TAREFAS DO PROJETO: #{nome_proj}")
+    IO.puts("-------------------------")
+    Enum.each(tarefas, fn tarefa ->
+      responsavel = tarefa.membro_respons |> Map.get(:nome) |> String.trim |> String.replace("\"", "")
+      IO.puts("Descricao: #{tarefa.descricao} \nData inicial: #{tarefa.data_ini} \nData termino prevista: #{tarefa.data_term} \nStatus: #{tarefa.status} \nResponsavel: #{responsavel}\n")
+      IO.puts("")
+    end)
   end
 
   def inserir_projeto(nome, descricao, data_ini, data_term, status, id_responsavel) do
     d_ini = converter_data(data_ini)
     d_term = converter_data(data_term)
     projeto = %Proj.Projeto{nome: nome, descricao: descricao, data_ini: d_ini, data_term: d_term, status: status, id_responsavel: id_responsavel}
-    # projeto |> DB.insert()
-
-
     case DB.insert(projeto) do
       {:ok, _} ->
         IO.puts("Projeto criado com sucesso")
@@ -190,8 +345,6 @@ defmodule Proj do
     d_term = converter_data(data_term)
 
     tarefa = %Proj.Tarefa{descricao: descricao, data_ini: d_ini, data_term: d_term, status: status, membro_responsavel: id_responsavel, projeto_associado: id_projeto}
-    # tarefa |> DB.insert()
-
     case DB.insert(tarefa) do
       {:ok, _} ->
         IO.puts("Tarefa criada com sucesso")
@@ -201,7 +354,6 @@ defmodule Proj do
         IO.puts("Erro ao criar tarefa, tente novamente")
         {:error, :erro_tarefa}
     end
-
   end
 
   def inserir_documento(nome, descricao, versao, id_projeto) do
@@ -216,15 +368,7 @@ defmodule Proj do
         IO.puts("Erro ao inserir o documento, tente novamente")
         {:error, :erro_documento}
     end
-
   end
-
-  # def ins_projeto(nome, descricao, data_ini, data_term, status, id_responsavel) do
-  # %Projeto{}
-  # |> Projeto.changeset(params)
-  # |> Repo.insert
-  # |> update_associations(params)
-  # end
 
   def associar_hab_membro(nome_habilidade, id_membro) do
     habilidade = buscar_habilidade(nome_habilidade)
@@ -233,7 +377,6 @@ defmodule Proj do
         %{id: id_membro}
       ]
     }
-
     case update_associations(DB, habilidade, params) do
       {:ok, _} ->
         IO.puts("Habilidade atribuida com sucesso")
@@ -243,16 +386,13 @@ defmodule Proj do
         IO.puts("Erro ao atribuir a habilidade, tente novamente")
         {:error, :erro_habilidade_assoc}
     end
-
   end
-
 
   def associar_membro_projeto(nome_membro, id_projeto) do
     membro = buscar_membro(nome_membro)
     params = %{
       projetos: [ %{id: id_projeto}]
     }
-
     case update_associations(DB,membro,params) do
       {:ok, _} ->
         IO.puts("Membero atribuido com sucesso")
@@ -262,7 +402,32 @@ defmodule Proj do
         IO.puts("Erro ao atribuir o membro, tente novamente")
         {:error, :erro_membro_assoc}
     end
+  end
 
+  def update_projeto_stts(nome_projeto, status) do
+    DB.get_by(Proj.Projeto, nome: nome_projeto)
+    |> Ecto.Changeset.change(%{status: status})
+    |> DB.update()
+  end
+
+  def update_tarefa_stts(id_tarefa, status) do
+    DB.get_by(Proj.Tarefa, id: id_tarefa)
+    |> Ecto.Changeset.change(%{status: status})
+    |> DB.update()
+  end
+
+  def update_projeto_resp(nome_projeto, nome_respons) do
+    id_respons = buscar_membro_id(nome_respons)
+    DB.get_by(Proj.Projeto, nome: nome_projeto)
+    |> Ecto.Changeset.change(%{id_responsavel: id_respons})
+    |> DB.update()
+  end
+
+  def update_tarefa_resp(id_tarefa, nome_respons) do
+    id_respons = buscar_membro_id(nome_respons)
+    DB.get_by(Proj.Tarefa, id: id_tarefa)
+    |> Ecto.Changeset.change(%{membro_responsavel: id_respons})
+    |> DB.update()
   end
 
   def main do
@@ -270,17 +435,25 @@ defmodule Proj do
     IO.puts("GERENCIAMENTO DE PROJETOS")
     IO.puts("-------------------------")
     IO.puts("MENU")
-    IO.puts("'1- CRIACAO / CADASTROS")
-    IO.puts("'2- BUSCAS")
-    IO.puts("'3- EDITAR STATUS DE PROJETOS / TAREFAS")
-    IO.puts("'4- SAIR")
+    IO.puts("1- CRIACAO / CADASTROS")
+    IO.puts("2- BUSCAS")
+    IO.puts("3- EDITAR STATUS DE PROJETOS / TAREFAS")
+    IO.puts("4- SAIR")
 
     choice = IO.gets(" ") |> String.trim
 
     case choice do
-      "1" -> menu_cadastros()
-      "2" -> menu_buscas()
-      "0" -> exit(:normal)
+      "1" ->
+        menu_cadastros()
+
+      "2" ->
+        menu_buscas()
+
+      "3" ->
+        menu_update()
+
+      "4" ->
+        exit(:normal)
       _ -> IO.puts("Opção invalida. Tente novamente.")
     end
 
@@ -289,9 +462,8 @@ defmodule Proj do
 
   @spec menu_cadastros() :: no_return
   defp menu_cadastros() do
-    IO.puts("CADASTROS")
+    IO.puts("MENU CADASTROS")
     IO.puts("-------------------------")
-    IO.puts("MENU")
     IO.puts("1- CRIAR PROJETO")
     IO.puts("2- CRIAR TAREFA")
     IO.puts("3- CADASTRAR MEMBRO")
@@ -308,19 +480,19 @@ defmodule Proj do
         IO.puts("CRIAR PROJETO")
         nome = IO.gets("NOME:") |> String.trim
         descric = IO.gets("DESCRICAO:") |> String.trim
-        data_ini = IO.gets("DATA INICIAL: (dd-mm-yyyy)") |> String.trim
-        data_term = IO.gets("DATA DO TERMINO PREVISTO: (dd-mm-yyyy)") |> String.trim
-        status = IO.gets("STATUS: (em andamento, concluido, cancelado)") |> String.trim
+        data_ini = IO.gets("DATA INICIAL (dd-mm-yyyy): ") |> String.trim
+        data_term = IO.gets("DATA DO TERMINO PREVISTO (dd-mm-yyyy): ") |> String.trim
+        status = IO.gets("STATUS (ex: em andamento, concluido, cancelado): ") |> String.trim
         n_resp = IO.gets("NOME DO RESPONSAVEL: ") |> String.trim
         respons = buscar_proj_id(n_resp)
         inserir_projeto(nome, descric, data_ini, data_term, status, respons)
 
       "2" ->
         IO.puts("CRIAR TAREFA")
-        descric = IO.gets("DESCRIÇÃO:") |> String.trim
-        data_ini = IO.gets("DATA INICIAL: (dd-mm-yyyy)") |> String.trim
-        data_term = IO.gets("DATA DO TERMINO PREVISTO: (dd-mm-yyyy)") |> String.trim
-        status = IO.gets("STATUS: (em andamento, concluida, pendente)") |> String.trim
+        descric = IO.gets("DESCRICAO:") |> String.trim
+        data_ini = IO.gets("DATA INICIAL (dd-mm-yyyy)") |> String.trim
+        data_term = IO.gets("DATA DO TERMINO PREVISTO (dd-mm-yyyy): ") |> String.trim
+        status = IO.gets("STATUS (em andamento, concluida, pendente): ") |> String.trim
         n_resp = IO.gets("NOME DO RESPONSAVEL: ") |> String.trim
         respons = buscar_membro_id(n_resp)
         p_ass= IO.gets("NOME DO PROJETO: ") |> String.trim
@@ -330,7 +502,7 @@ defmodule Proj do
       "3" ->
         IO.puts("CADASTRAR MEMBRO")
         nome = IO.gets("NOME: ") |> String.trim
-        funcao = IO.gets("FUNÇÃO: ") |> String.trim
+        funcao = IO.gets("FUNCAO: ") |> String.trim
         inserir_membro(nome, funcao)
 
       "4" ->
@@ -355,13 +527,15 @@ defmodule Proj do
         "7" ->
           IO.puts("ATRIBUIR DOCUMENTO")
           nome = IO.gets("NOME: ") |> String.trim
-          desc = IO.gets("DESCRIÇÃO: ") |> String.trim
+          desc = IO.gets("DESCRICAO: ") |> String.trim
           versao = IO.gets("VERSÃO: ") |> String.trim
           nome_proj = IO.gets("NOME DO PROJETO: ") |> String.trim
           id_proj = buscar_proj_id(nome_proj)
           inserir_documento(nome,desc,versao,id_proj)
 
         "9" -> main()
+
+        _ -> IO.puts("Opcao invalida. Tente novamente.")
     end
 
     menu_cadastros()
@@ -369,9 +543,8 @@ defmodule Proj do
 
   @spec menu_buscas() :: no_return
   defp menu_buscas() do
-    IO.puts("BUSCAS")
+    IO.puts("MENU BUSCAS")
     IO.puts("-------------------------")
-    IO.puts("MENU")
     IO.puts("1- BUSCAR TODOS OS PROJETOS")
     IO.puts("2- BUSCAR TODOS OS MEMBROS")
     IO.puts("3- BUSCAR TODAS AS HABILIDADES")
@@ -383,17 +556,111 @@ defmodule Proj do
     IO.puts("9- BUSCAR PROJETOS POR STATUS")
     IO.puts("10- BUSCAR TAREFAS CONCLUIDAS DE UM PROJETO")
     IO.puts("11- BUSCAR PROJETOS ATRASADOS")
-    IO.puts("12- VOLTAR")
+    IO.puts("12- BUSCAR  TAREFAS DE UM PROJETO")
+    IO.puts("13- VOLTAR")
     op1 = IO.gets(" ") |> String.trim
 
     case op1 do
-      "1" -> buscar_all_projetos()
+      "1" ->
+        buscar_all_projetos()
+
+      "2" ->
+        buscar_all_membros()
+
+      "3" ->
+        buscar_all_habilidades()
+
+      "4" ->
+        buscar_all_tarefas()
+
+      "5" ->
+        nome = IO.gets("DIGITE O NOME DA HABILIDADE:") |> String.trim
+        buscar_membros_hab(nome)
+
+      "6" ->
+        nome = IO.gets("DIGITE O NOME DO MEMBRO:") |> String.trim
+        buscar_projetos_membro(nome)
+
+      "7" ->
+        nome = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
+        buscar_membros_projeto(nome)
+
+      "8" ->
+        nome = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
+        buscar_documentos_projeto(nome)
+
+      "9" ->
+        status = IO.gets("DIGITE O STATUS (ex: em andamento, concluido, cancelado): ") |> String.trim
+        buscar_projetos_status(status)
+
+      "10" ->
+        nome = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
+        buscar_taref_conc_proj(nome)
+
+      "11" ->
+        buscar_projetos_atras()
+
+      "12" ->
+        nome = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
+        buscar_tarefas_proj(nome)
+
+      "13" -> main()
+
+      _ -> IO.puts("Opcao invalida. Tente novamente.")
+
+    end
+    menu_buscas()
+
+  end
+
+  @spec menu_update() :: no_return
+  defp menu_update() do
+    IO.puts("EDITAR STATUS DE PROJETOS / TAREFAS")
+    IO.puts("-------------------------")
+    IO.puts("MENU")
+    IO.puts("'1- EDITAR STATUS DE UM PROJETO")
+    IO.puts("'2- EDITAR STATUS DE UMA TAREFA")
+    IO.puts("'3- EDITAR RESPONSAVEL DE UM PROJETO")
+    IO.puts("'4- EDITAR RESPONSAVEL DE UMA TAREFA")
+    IO.puts("'5- VOLTAR")
+    op1 = IO.gets(" ") |> String.trim
+
+    case op1 do
+      "1" ->
+        nome_p = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
+        status = IO.gets("DIGITE O NOVO STATUS (ex: em andamento, concluido, cancelado):") |> String.trim
+        update_projeto_stts(nome_p, status)
+
+      "2" ->
+        id_tarefa = IO.gets("DIGITE O NUMERO DA TAREFA:") |> String.trim
+        status = IO.gets("DIGITE O NOVO STATUS (ex: em andamento, concluida, pendente):") |> String.trim
+        update_tarefa_stts(id_tarefa, status)
+
+      "3" ->
+        nome_p = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
+        nome_resp = IO.gets("DIGITE O NOME DO NOVO RESPONSAVEL:") |> String.trim
+        update_projeto_resp(nome_p, nome_resp)
+
+      "4" ->
+        id_tarefa = IO.gets("DIGITE O NUMERO DA TAREFA:") |> String.trim
+        nome_resp = IO.gets("DIGITE O NOME DO NOVO RESPONSAVEL:") |> String.trim
+        update_projeto_resp(id_tarefa, nome_resp)
+
+        "5" ->
+          main()
     end
 
+    menu_update()
   end
 
   defp converter_data(string_data) do
     [dia, mes, ano] = String.split(string_data, "-") |> Enum.map(&String.to_integer/1)
+    Date.from_erl!({ano, mes, dia})
+  end
+
+  @spec obter_data_atual() :: no_return
+  def obter_data_atual do
+    {ano, mes, dia} = Date.utc_today() |> Date.to_erl
     Date.from_erl!({ano, mes, dia})
   end
 
@@ -402,7 +669,6 @@ defmodule Proj do
       IO.puts("")
     end
   end
-
 
   def hello do
     :world
