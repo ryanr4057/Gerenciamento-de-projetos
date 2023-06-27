@@ -197,7 +197,7 @@ defmodule Proj do
       |> Enum.map(fn membro -> Map.get(membro, :nome) |> String.trim end)
       |> Enum.join(", ")
       responsavel = projeto.responsavel |> Map.get(:nome) |> String.trim |> String.replace("\"", "")
-      IO.puts("Nome do Projeto: #{projeto.nome} \nDescricao: #{projeto.descricao} \nData inicial: #{projeto.data_ini} \nData termino prevista: #{projeto.data_term} \nStatus: #{projeto.status} \nResponsavel: #{responsavel}\nMembros: #{membros} \n")
+      IO.puts("Nome do Projeto: #{projeto.nome} \nDescricao: #{projeto.descricao} \nData inicial: #{inverter_data(projeto.data_ini)} \nData termino prevista: #{inverter_data(projeto.data_term)} \nStatus: #{projeto.status} \nResponsavel: #{responsavel}\nMembros: #{membros} \n")
       IO.puts("")
     end)
   end
@@ -215,7 +215,7 @@ defmodule Proj do
     Enum.each(tarefas, fn tarefa ->
       responsavel = tarefa.membro_respons |> Map.get(:nome) |> String.trim |> String.replace("\"", "")
       projet = tarefa.proj_associado |> Map.get(:nome) |> String.trim |> String.replace("\"", "")
-      IO.puts("Descricao: #{tarefa.descricao} \nData inicial: #{tarefa.data_ini} \nData termino prevista: #{tarefa.data_term} \nStatus: #{tarefa.status} \nResponsavel: #{responsavel}\nProjeto: #{projet} \n")
+      IO.puts("Descricao: #{tarefa.descricao} \nData inicial: #{inverter_data(tarefa.data_ini)} \nData termino prevista: #{inverter_data(tarefa.data_term)} \nStatus: #{tarefa.status} \nResponsavel: #{responsavel}\nProjeto: #{projet} \n")
       IO.puts("")
     end)
   end
@@ -451,6 +451,18 @@ defmodule Proj do
     |> DB.update()
   end
 
+  def update_projeto_prazo(nome_projeto, prazo) do
+    DB.get_by(Proj.Projeto, nome: nome_projeto)
+    |> Ecto.Changeset.change(%{data_term: prazo})
+    |> DB.update()
+  end
+
+  def update_tarefa_prazo(id_tarefa, prazo) do
+    DB.get_by(Proj.Tarefa, id: id_tarefa)
+    |> Ecto.Changeset.change(%{data_term: prazo})
+    |> DB.update()
+  end
+
   def update_tarefa_stts(id_tarefa, status) do
     DB.get_by(Proj.Tarefa, id: id_tarefa)
     |> Ecto.Changeset.change(%{status: status})
@@ -621,7 +633,7 @@ defmodule Proj do
     IO.puts("9- BUSCAR PROJETOS POR STATUS")
     IO.puts("10- BUSCAR TAREFAS CONCLUIDAS DE UM PROJETO")
     IO.puts("11- BUSCAR PROJETOS ATRASADOS")
-    IO.puts("12- BUSCAR  TAREFAS DE UM PROJETO")
+    IO.puts("12- BUSCAR TAREFAS DE UM PROJETO")
     IO.puts("13- VOLTAR")
     op1 = IO.gets(" ") |> String.trim
 
@@ -699,13 +711,15 @@ defmodule Proj do
 
   @spec menu_update() :: no_return
   defp menu_update() do
-    IO.puts("MENU EDITAR STATUS DE PROJETOS / TAREFAS")
+    IO.puts("MENU EDITAR PROJETOS / TAREFAS")
     IO.puts("----------------------------------------")
     IO.puts("1- EDITAR STATUS DE UM PROJETO")
     IO.puts("2- EDITAR STATUS DE UMA TAREFA")
     IO.puts("3- EDITAR RESPONSAVEL DE UM PROJETO")
     IO.puts("4- EDITAR RESPONSAVEL DE UMA TAREFA")
-    IO.puts("5- VOLTAR")
+    IO.puts("5- PRAZO DE UM PROJETO")
+    IO.puts("6- PRAZO DE UMA TAREFA")
+    IO.puts("7- VOLTAR")
     op1 = IO.gets(" ") |> String.trim
 
     case op1 do
@@ -762,6 +776,25 @@ defmodule Proj do
 
       "5" ->
         limpar_console()
+        nome_p = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
+        nome_p = String.downcase(nome_p)
+        nome_p = valida_projeto(nome_p)
+        data_term = IO.gets("DATA DO PRAZO(dd-mm-yyyy): ") |> String.trim
+        data_term = valida_data(data_term)
+        data_term = converter_data(data_term)
+        update_projeto_prazo(nome_p, data_term)
+        IO.puts("\nPrazo definido com sucesso\n")
+      "6" ->
+        limpar_console()
+        id_tarefa = String.to_integer(IO.gets("DIGITE O NUMERO DA TAREFA:") |> String.trim)
+        id_tarefa = valida_tarefa(id_tarefa)
+        data_term = IO.gets("DATA DO PRAZO(dd-mm-yyyy): ") |> String.trim
+        data_term = valida_data(data_term)
+        data_term = converter_data(data_term)
+        update_tarefa_prazo(id_tarefa, data_term)
+        IO.puts("\nPrazo definido com sucesso\n")
+      "7" ->
+        limpar_console()
         main()
       _ -> IO.puts("Opcao invalida. Tente novamente.")
     end
@@ -772,6 +805,10 @@ defmodule Proj do
   defp converter_data(string_data) do
     [dia, mes, ano] = String.split(string_data, "-") |> Enum.map(&String.to_integer/1)
     Date.from_erl!({ano, mes, dia})
+  end
+
+  def inverter_data(date) do
+    "#{date.day}-#{date.month}-#{date.year}"
   end
 
   @spec obter_data_atual() :: no_return

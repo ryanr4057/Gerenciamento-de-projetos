@@ -12,8 +12,8 @@ defmodule Proj.Application do
       # Starts a worker by calling: Proj.Worker.start_link(arg)
       # {Proj.Worker, arg}
     ]
-    Proj.Repo.start_link()
-    Proj.main()
+    # Proj.Repo.start_link()
+    # Proj.main()
 
 
     # See https://hexdocs.pm/elixir/Supervisor.html
