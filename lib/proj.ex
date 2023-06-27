@@ -75,10 +75,42 @@ defmodule Proj do
 
   def buscar_projeto(nome) do
     DB.one(
-      Proj.Membro
+      Proj.Projeto
       |> select([projeto], projeto)
       |> where([projeto], projeto.nome == ^nome)
     )
+  end
+
+  def buscar_projeto_nomes() do
+    projetos = DB.all(
+      Proj.Projeto
+      |> select([projeto], projeto.nome)
+    )
+    projetos
+  end
+
+  def buscar_tarefa_nomes() do
+    tarefas = DB.all(
+      Proj.Tarefa
+      |> select([tarefa], tarefa.id)
+    )
+    tarefas
+  end
+
+  def buscar_membro_nomes() do
+    membros = DB.all(
+      Proj.Membro
+      |> select([membro], membro.nome)
+    )
+    membros
+  end
+
+  def buscar_habilidade_nomes() do
+    habilidades = DB.all(
+      Proj.Habilidade
+      |> select([habilidade], habilidade.nome)
+    )
+    habilidades
   end
 
   def buscar_proj_id(nome) do
@@ -88,6 +120,15 @@ defmodule Proj do
       |> where([projeto], projeto.nome == ^nome)
     )
     id_projeto
+  end
+
+  def buscar_proj_nome(id) do
+    nome_projeto = DB.one(
+      Proj.Projeto
+      |> select([projeto], projeto.nome)
+      |> where([projeto], projeto.id == ^id)
+    )
+    nome_projeto
   end
 
   def buscar_membro_id(nome) do
@@ -330,11 +371,11 @@ defmodule Proj do
     projeto = %Proj.Projeto{nome: nome, descricao: descricao, data_ini: d_ini, data_term: d_term, status: status, id_responsavel: id_responsavel}
     case DB.insert(projeto) do
       {:ok, _} ->
-        IO.puts("Projeto criado com sucesso")
+        IO.puts("\nProjeto criado com sucesso\n")
         {:ok, :projeto_criado}
 
       {:error, _} ->
-        IO.puts("Erro ao criar projeto, tente novamente")
+        IO.puts("\nErro ao criar projeto, tente novamente\n")
         {:error, :erro_projeto}
     end
 
@@ -347,11 +388,11 @@ defmodule Proj do
     tarefa = %Proj.Tarefa{descricao: descricao, data_ini: d_ini, data_term: d_term, status: status, membro_responsavel: id_responsavel, projeto_associado: id_projeto}
     case DB.insert(tarefa) do
       {:ok, _} ->
-        IO.puts("Tarefa criada com sucesso")
+        IO.puts("\nTarefa criada com sucesso\n")
         {:ok, :tarefa_criado}
 
       {:error, _} ->
-        IO.puts("Erro ao criar tarefa, tente novamente")
+        IO.puts("\nErro ao criar tarefa, tente novamente\n")
         {:error, :erro_tarefa}
     end
   end
@@ -361,11 +402,11 @@ defmodule Proj do
     # documento |> DB.insert()
     case DB.insert(documento) do
       {:ok, _} ->
-        IO.puts("Documento criado com sucesso")
+        IO.puts("\nDocumento criado com sucesso\n")
         {:ok, :documento_criado}
 
       {:error, _} ->
-        IO.puts("Erro ao inserir o documento, tente novamente")
+        IO.puts("\nErro ao inserir o documento, tente novamente\n")
         {:error, :erro_documento}
     end
   end
@@ -379,11 +420,11 @@ defmodule Proj do
     }
     case update_associations(DB, habilidade, params) do
       {:ok, _} ->
-        IO.puts("Habilidade atribuida com sucesso")
+        IO.puts("\nHabilidade atribuida com sucesso\n")
         {:ok, :habilidade_assoc}
 
       {:error, _} ->
-        IO.puts("Erro ao atribuir a habilidade, tente novamente")
+        IO.puts("\nErro ao atribuir a habilidade, tente novamente\n")
         {:error, :erro_habilidade_assoc}
     end
   end
@@ -395,11 +436,11 @@ defmodule Proj do
     }
     case update_associations(DB,membro,params) do
       {:ok, _} ->
-        IO.puts("Membero atribuido com sucesso")
+        IO.puts("\nMembero atribuido com sucesso\n")
         {:ok, :membro_assoc}
 
       {:error, _} ->
-        IO.puts("Erro ao atribuir o membro, tente novamente")
+        IO.puts("\nErro ao atribuir o membro, tente novamente\n")
         {:error, :erro_membro_assoc}
     end
   end
@@ -431,7 +472,7 @@ defmodule Proj do
   end
 
   def main do
-
+    limpar_console()
     IO.puts("GERENCIAMENTO DE PROJETOS")
     IO.puts("-------------------------")
     IO.puts("MENU")
@@ -444,12 +485,15 @@ defmodule Proj do
 
     case choice do
       "1" ->
+        limpar_console()
         menu_cadastros()
 
       "2" ->
+        limpar_console()
         menu_buscas()
 
       "3" ->
+        limpar_console()
         menu_update()
 
       "4" ->
@@ -472,64 +516,85 @@ defmodule Proj do
     IO.puts("6- ATRIBUIR MEMBRO A PROJETO")
     IO.puts("7- ATRIBUIR DOCUMENTO")
     IO.puts("8- CRIAR RELATORIO")
-    IO.puts("9- SAIR")
+    IO.puts("9- VOLTAR")
     op1 = IO.gets(" ") |> String.trim
 
     case op1 do
       "1" ->
+        limpar_console()
         IO.puts("CRIAR PROJETO")
-        nome = IO.gets("NOME:") |> String.trim
-        descric = IO.gets("DESCRICAO:") |> String.trim
+        nome = String.downcase(IO.gets("NOME:") |> String.trim)
+        descric = String.downcase(IO.gets("DESCRICAO:") |> String.trim)
         data_ini = IO.gets("DATA INICIAL (dd-mm-yyyy): ") |> String.trim
+        data_ini = valida_data(data_ini)
         data_term = IO.gets("DATA DO TERMINO PREVISTO (dd-mm-yyyy): ") |> String.trim
-        status = IO.gets("STATUS (ex: em andamento, concluido, cancelado): ") |> String.trim
-        n_resp = IO.gets("NOME DO RESPONSAVEL: ") |> String.trim
-        respons = buscar_proj_id(n_resp)
+        data_term = valida_data(data_term)
+        status = String.downcase(IO.gets("STATUS (ex: em andamento, concluido, cancelado): ") |> String.trim)
+        status = valida_stts_p(status)
+        n_resp = String.downcase(IO.gets("NOME DO RESPONSAVEL: ") |> String.trim)
+        n_resp = valida_membro(n_resp)
+        respons = buscar_membro_id(n_resp)
         inserir_projeto(nome, descric, data_ini, data_term, status, respons)
 
       "2" ->
+        limpar_console()
         IO.puts("CRIAR TAREFA")
-        descric = IO.gets("DESCRICAO:") |> String.trim
-        data_ini = IO.gets("DATA INICIAL (dd-mm-yyyy)") |> String.trim
-        data_term = IO.gets("DATA DO TERMINO PREVISTO (dd-mm-yyyy): ") |> String.trim
-        status = IO.gets("STATUS (em andamento, concluida, pendente): ") |> String.trim
-        n_resp = IO.gets("NOME DO RESPONSAVEL: ") |> String.trim
+        descric = String.downcase(IO.gets("DESCRICAO:") |> String.trim)
+        data_ini = String.downcase(IO.gets("DATA INICIAL (dd-mm-yyyy)") |> String.trim)
+        data_term = String.downcase(IO.gets("DATA DO TERMINO PREVISTO (dd-mm-yyyy): ") |> String.trim)
+        status = String.downcase(IO.gets("STATUS (em andamento, concluida, pendente): ") |> String.trim)
+        status = String.downcase(status)
+        status = valida_stts_t(status)
+
+        n_resp = String.downcase(IO.gets("NOME DO RESPONSAVEL: ") |> String.trim)
+        n_resp = valida_membro(n_resp)
         respons = buscar_membro_id(n_resp)
-        p_ass= IO.gets("NOME DO PROJETO: ") |> String.trim
+        p_ass= String.downcase(IO.gets("NOME DO PROJETO: ") |> String.trim)
+        p_ass = valida_projeto(p_ass)
         proj_assoc = buscar_proj_id(p_ass)
         inserir_tarefa(descric, data_ini, data_term, status, respons, proj_assoc)
 
       "3" ->
+        limpar_console()
         IO.puts("CADASTRAR MEMBRO")
-        nome = IO.gets("NOME: ") |> String.trim
-        funcao = IO.gets("FUNCAO: ") |> String.trim
+        nome = String.downcase(IO.gets("NOME: ") |> String.trim)
+        funcao = String.downcase(IO.gets("FUNCAO: ") |> String.trim)
         inserir_membro(nome, funcao)
 
       "4" ->
+        limpar_console()
         IO.puts("CADASTRAR HABILIDADE")
-        nome = IO.gets("NOME: ") |> String.trim
+        nome = String.downcase(IO.gets("NOME: ") |> String.trim)
         inserir_habilidade(nome)
 
       "5" ->
+        limpar_console()
         IO.puts("ATRIBUIR HABILIDADE A MEMBRO")
-        nome_m = IO.gets("NOME DO MEMBRO: ") |> String.trim
+        nome_m = String.downcase(IO.gets("NOME DO MEMBRO: ") |> String.trim)
+        nome_m = valida_membro(nome_m)
         id_membro = buscar_membro_id(nome_m)
-        nome_h = IO.gets("NOME DA HABILIDADE: ") |> String.trim
+        nome_h = String.downcase(IO.gets("NOME DA HABILIDADE: ") |> String.trim)
+        nome_h = valida_habilidade(nome_h)
         associar_hab_membro(nome_h, id_membro)
 
         "6" ->
+          limpar_console()
           IO.puts("ATRIBUIR MEMBRO A UM PROJETO")
-          nome_m = IO.gets("NOME DO MEMBRO: ") |> String.trim
-          nome_proj = IO.gets("NOME DO PROJETO: ") |> String.trim
+          nome_m = String.downcase(IO.gets("NOME DO MEMBRO: ") |> String.trim)
+          nome_m = valida_membro(nome_m)
+          nome_proj = String.downcase(IO.gets("NOME DO PROJETO: ") |> String.trim)
+          nome_proj = valida_projeto(nome_proj)
           id_proj = buscar_proj_id(nome_proj)
           associar_membro_projeto(nome_m, id_proj)
 
         "7" ->
+          limpar_console()
           IO.puts("ATRIBUIR DOCUMENTO")
-          nome = IO.gets("NOME: ") |> String.trim
-          desc = IO.gets("DESCRICAO: ") |> String.trim
-          versao = IO.gets("VERSÃO: ") |> String.trim
-          nome_proj = IO.gets("NOME DO PROJETO: ") |> String.trim
+          nome = String.downcase(IO.gets("NOME: ") |> String.trim)
+          desc = String.downcase(IO.gets("DESCRICAO: ") |> String.trim)
+          versao = String.downcase(IO.gets("VERSÃO: ") |> String.trim)
+          nome_proj = String.downcase(IO.gets("NOME DO PROJETO: ") |> String.trim)
+          nome_proj = valida_projeto(nome_proj)
           id_proj = buscar_proj_id(nome_proj)
           inserir_documento(nome,desc,versao,id_proj)
 
@@ -562,46 +627,65 @@ defmodule Proj do
 
     case op1 do
       "1" ->
+        limpar_console()
         buscar_all_projetos()
 
       "2" ->
+        limpar_console()
         buscar_all_membros()
 
       "3" ->
+        limpar_console()
         buscar_all_habilidades()
 
       "4" ->
+        limpar_console()
         buscar_all_tarefas()
 
       "5" ->
-        nome = IO.gets("DIGITE O NOME DA HABILIDADE:") |> String.trim
+        limpar_console()
+        nome = String.downcase(IO.gets("DIGITE O NOME DA HABILIDADE:") |> String.trim)
+        nome = valida_habilidade(nome)
         buscar_membros_hab(nome)
 
       "6" ->
-        nome = IO.gets("DIGITE O NOME DO MEMBRO:") |> String.trim
+        limpar_console()
+        nome = String.downcase(IO.gets("DIGITE O NOME DO MEMBRO:") |> String.trim)
+        nome = valida_membro(nome)
         buscar_projetos_membro(nome)
 
       "7" ->
-        nome = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
+        limpar_console()
+        nome = String.downcase(IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim)
+        nome = valida_projeto(nome)
         buscar_membros_projeto(nome)
 
       "8" ->
-        nome = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
+        limpar_console()
+        nome = String.downcase(IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim)
+        nome = valida_projeto(nome)
         buscar_documentos_projeto(nome)
 
       "9" ->
-        status = IO.gets("DIGITE O STATUS (ex: em andamento, concluido, cancelado): ") |> String.trim
+        limpar_console()
+        status = String.downcase(IO.gets("DIGITE O STATUS (ex: em andamento, concluido, cancelado): ") |> String.trim)
+        status = valida_stts_p(status)
         buscar_projetos_status(status)
 
       "10" ->
-        nome = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
+        limpar_console()
+        nome = String.downcase(IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim)
+        nome = valida_projeto(nome)
         buscar_taref_conc_proj(nome)
 
       "11" ->
+        limpar_console()
         buscar_projetos_atras()
 
       "12" ->
-        nome = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
+        limpar_console()
+        nome = String.downcase(IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim)
+        nome = valida_projeto(nome)
         buscar_tarefas_proj(nome)
 
       "13" -> main()
@@ -615,39 +699,71 @@ defmodule Proj do
 
   @spec menu_update() :: no_return
   defp menu_update() do
-    IO.puts("EDITAR STATUS DE PROJETOS / TAREFAS")
-    IO.puts("-------------------------")
-    IO.puts("MENU")
-    IO.puts("'1- EDITAR STATUS DE UM PROJETO")
-    IO.puts("'2- EDITAR STATUS DE UMA TAREFA")
-    IO.puts("'3- EDITAR RESPONSAVEL DE UM PROJETO")
-    IO.puts("'4- EDITAR RESPONSAVEL DE UMA TAREFA")
-    IO.puts("'5- VOLTAR")
+    IO.puts("MENU EDITAR STATUS DE PROJETOS / TAREFAS")
+    IO.puts("----------------------------------------")
+    IO.puts("1- EDITAR STATUS DE UM PROJETO")
+    IO.puts("2- EDITAR STATUS DE UMA TAREFA")
+    IO.puts("3- EDITAR RESPONSAVEL DE UM PROJETO")
+    IO.puts("4- EDITAR RESPONSAVEL DE UMA TAREFA")
+    IO.puts("5- VOLTAR")
     op1 = IO.gets(" ") |> String.trim
 
     case op1 do
       "1" ->
+        limpar_console()
         nome_p = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
+        nome_p = String.downcase(nome_p)
+        nome_p = valida_projeto(nome_p)
+
         status = IO.gets("DIGITE O NOVO STATUS (ex: em andamento, concluido, cancelado):") |> String.trim
+        status = String.downcase(status)
+        status = valida_stts_p(status)
+
         update_projeto_stts(nome_p, status)
+        IO.puts("\nStatus atualizado com sucesso\n")
 
       "2" ->
-        id_tarefa = IO.gets("DIGITE O NUMERO DA TAREFA:") |> String.trim
+        limpar_console()
+        id_tarefa = String.to_integer(IO.gets("DIGITE O NUMERO DA TAREFA:") |> String.trim)
+        id_tarefa = valida_tarefa(id_tarefa)
+
         status = IO.gets("DIGITE O NOVO STATUS (ex: em andamento, concluida, pendente):") |> String.trim
+        status = String.downcase(status)
+        status = valida_stts_t(status)
+
         update_tarefa_stts(id_tarefa, status)
+        IO.puts("\nStatus atualizado com sucesso\n")
+
 
       "3" ->
+        limpar_console()
         nome_p = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
+        nome_p = String.downcase(nome_p)
+        nome_p = valida_projeto(nome_p)
         nome_resp = IO.gets("DIGITE O NOME DO NOVO RESPONSAVEL:") |> String.trim
+        nome_resp = String.downcase(nome_resp)
+        nome_resp = valida_membro(nome_resp)
         update_projeto_resp(nome_p, nome_resp)
 
-      "4" ->
-        id_tarefa = IO.gets("DIGITE O NUMERO DA TAREFA:") |> String.trim
-        nome_resp = IO.gets("DIGITE O NOME DO NOVO RESPONSAVEL:") |> String.trim
-        update_projeto_resp(id_tarefa, nome_resp)
+        IO.puts("\nResponsavel atualizado com sucesso\n")
 
-        "5" ->
-          main()
+
+      "4" ->
+        limpar_console()
+        id_tarefa = String.to_integer(IO.gets("DIGITE O NUMERO DA TAREFA:") |> String.trim)
+        id_tarefa = valida_tarefa(id_tarefa)
+
+        nome_resp = IO.gets("DIGITE O NOME DO NOVO RESPONSAVEL:") |> String.trim
+        nome_resp = String.downcase(nome_resp)
+        nome_resp = valida_membro(nome_resp)
+        update_tarefa_resp(id_tarefa, nome_resp)
+
+        IO.puts("\nResponsavel atualizado com sucesso\n")
+
+      "5" ->
+        limpar_console()
+        main()
+      _ -> IO.puts("Opcao invalida. Tente novamente.")
     end
 
     menu_update()
@@ -662,6 +778,107 @@ defmodule Proj do
   def obter_data_atual do
     {ano, mes, dia} = Date.utc_today() |> Date.to_erl
     Date.from_erl!({ano, mes, dia})
+  end
+
+  defp valida_stts_p(status) do
+    case status do
+      "em andamento" ->
+        status
+      "concluido" ->
+        status
+      "cancelado" ->
+        status
+      _ ->
+        status = IO.gets("Status invalido. Tente novamente: ") |> String.trim
+        valida_stts_p(status)
+    end
+    status
+  end
+
+  defp valida_stts_t(status) do
+    case status do
+      "em andamento" ->
+        status
+      "concluida" ->
+        status
+      "pendente" ->
+        status
+      _ ->
+        status = IO.gets("Status invalido. Tente novamente: ") |> String.trim
+        valida_stts_t(status)
+    end
+    status
+  end
+
+  def valida_projeto(projeto) do
+    projetos = buscar_projeto_nomes()
+
+    if projeto in projetos do
+      projeto
+    else
+      projeto = IO.gets("Projeto invalido. Tente novamente: ") |> String.trim
+      projeto = valida_projeto(projeto)
+      projeto
+    end
+  end
+
+  def valida_membro(membro) do
+    membros = buscar_membro_nomes()
+
+    if membro in membros do
+      membro
+    else
+      membro = IO.gets("Membro invalido. Tente novamente: ") |> String.trim
+      membro = valida_membro(membro)
+      membro
+    end
+  end
+
+  def valida_tarefa(tarefa) do
+    tarefas = buscar_tarefa_nomes()
+
+    if tarefa in tarefas do
+      tarefa
+    else
+      tarefa = String.to_integer(IO.gets("Tarefa invalida. Tente novamente: ") |> String.trim)
+      tarefa = valida_tarefa(tarefa)
+      tarefa
+    end
+  end
+
+  def valida_habilidade(habilidade) do
+    habilidades = buscar_habilidade_nomes()
+
+    if habilidade in habilidades do
+      habilidade
+    else
+      habilidade = IO.gets("Habilidade invalida. Tente novamente: ") |> String.trim
+      habilidade = valida_habilidade(habilidade)
+      habilidade
+    end
+  end
+
+  def valida_data(string) do
+    if String.match?(string, ~r/^\d{2}-\d{2}-\d{4}$/) do
+      [dia, mes, ano] = String.split(string, "-")
+      {parsed_dia, _} = Integer.parse(dia)
+      {parsed_mes, _} = Integer.parse(mes)
+      {parsed_ano, _} = Integer.parse(ano)
+
+      if parsed_dia >= 1 and parsed_dia <= 31 and
+        parsed_mes >= 1 and parsed_mes <= 12 and
+        parsed_ano >= 1 do
+        string
+      else
+        string = IO.gets("Tarefa invalida. Tente novamente: ") |> String.trim
+        string = valida_data(string)
+        string
+      end
+    else
+      string = IO.gets("Tarefa invalida. Tente novamente: ") |> String.trim
+      string = valida_data(string)
+      string
+    end
   end
 
   def limpar_console do

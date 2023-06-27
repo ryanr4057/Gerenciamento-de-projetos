@@ -12,12 +12,15 @@ defmodule Proj.Application do
       # Starts a worker by calling: Proj.Worker.start_link(arg)
       # {Proj.Worker, arg}
     ]
+    Proj.Repo.start_link()
+    Proj.main()
 
-    # Proj.main()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Proj.Supervisor]
     Supervisor.start_link(children, opts)
+    # Proj.Repo.start_link(opts)
+
   end
 end
