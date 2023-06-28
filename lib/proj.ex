@@ -289,6 +289,23 @@ defmodule Proj do
     IO.puts("")
   end
 
+  def buscar_relatorios_projeto(nome_proj) do
+    projeto = DB.one(
+      Proj.Projeto
+      |> select([projeto], projeto)
+      |> where([projeto], projeto.nome == ^nome_proj)
+      |> order_by(asc: :id)
+      |> preload(:relatorios)
+    )
+    IO.puts("DOCUMENTOS DO PROJETO: #{nome_proj}")
+    IO.puts("-------------------------")
+    relatorios = projeto.relatorios
+    |> Enum.map(fn relatorio -> Map.get(relatorio, :tipo) |> String.trim end)
+    |> Enum.join(", ")
+    IO.puts("Relatorios: #{relatorios} \n")
+    IO.puts("")
+  end
+
   def buscar_projetos_status(status) do
     projetos = DB.all(
       Proj.Projeto
@@ -408,6 +425,21 @@ defmodule Proj do
       {:error, _} ->
         IO.puts("\nErro ao inserir o documento, tente novamente\n")
         {:error, :erro_documento}
+    end
+  end
+
+  def inserir_relatorio(tipo, data, id_projeto) do
+    cdata = converter_data(data)
+    relatorio = %Proj.Relatorio{tipo: tipo, data: cdata, projeto: id_projeto}
+    # documento |> DB.insert()
+    case DB.insert(relatorio) do
+      {:ok, _} ->
+        IO.puts("\nRelatorio criado com sucesso\n")
+        {:ok, :relatorio_criado}
+
+      {:error, _} ->
+        IO.puts("\nErro ao inserir o relatorio, tente novamente\n")
+        {:error, :erro_relatorio}
     end
   end
 
@@ -589,28 +621,39 @@ defmodule Proj do
         nome_h = valida_habilidade(nome_h)
         associar_hab_membro(nome_h, id_membro)
 
-        "6" ->
-          limpar_console()
-          IO.puts("ATRIBUIR MEMBRO A UM PROJETO")
-          nome_m = String.downcase(IO.gets("NOME DO MEMBRO: ") |> String.trim)
-          nome_m = valida_membro(nome_m)
-          nome_proj = String.downcase(IO.gets("NOME DO PROJETO: ") |> String.trim)
-          nome_proj = valida_projeto(nome_proj)
-          id_proj = buscar_proj_id(nome_proj)
-          associar_membro_projeto(nome_m, id_proj)
+      "6" ->
+        limpar_console()
+        IO.puts("ATRIBUIR MEMBRO A UM PROJETO")
+        nome_m = String.downcase(IO.gets("NOME DO MEMBRO: ") |> String.trim)
+        nome_m = valida_membro(nome_m)
+        nome_proj = String.downcase(IO.gets("NOME DO PROJETO: ") |> String.trim)
+        nome_proj = valida_projeto(nome_proj)
+        id_proj = buscar_proj_id(nome_proj)
+        associar_membro_projeto(nome_m, id_proj)
 
-        "7" ->
-          limpar_console()
-          IO.puts("ATRIBUIR DOCUMENTO")
-          nome = String.downcase(IO.gets("NOME: ") |> String.trim)
-          desc = String.downcase(IO.gets("DESCRICAO: ") |> String.trim)
-          versao = String.downcase(IO.gets("VERSÃO: ") |> String.trim)
-          nome_proj = String.downcase(IO.gets("NOME DO PROJETO: ") |> String.trim)
-          nome_proj = valida_projeto(nome_proj)
-          id_proj = buscar_proj_id(nome_proj)
-          inserir_documento(nome,desc,versao,id_proj)
+      "7" ->
+        limpar_console()
+        IO.puts("ATRIBUIR DOCUMENTO")
+        nome = String.downcase(IO.gets("NOME: ") |> String.trim)
+        desc = String.downcase(IO.gets("DESCRICAO: ") |> String.trim)
+        versao = String.downcase(IO.gets("VERSÃO: ") |> String.trim)
+        nome_proj = String.downcase(IO.gets("NOME DO PROJETO: ") |> String.trim)
+        nome_proj = valida_projeto(nome_proj)
+        id_proj = buscar_proj_id(nome_proj)
+        inserir_documento(nome,desc,versao,id_proj)
 
-        "9" -> main()
+      "8" ->
+        limpar_console()
+        IO.puts("CRIAR RELATORIO")
+        tipo = String.downcase(IO.gets("TIPO: ") |> String.trim)
+        data = String.downcase(IO.gets("DATA: ") |> String.trim)
+        data = valida_data(data)
+        nome_proj = String.downcase(IO.gets("NOME DO PROJETO: ") |> String.trim)
+        nome_proj = valida_projeto(nome_proj)
+        id_proj = buscar_proj_id(nome_proj)
+        inserir_relatorio(tipo,data,id_proj)
+
+      "9" -> main()
 
         _ -> IO.puts("Opcao invalida. Tente novamente.")
     end
@@ -634,7 +677,8 @@ defmodule Proj do
     IO.puts("10- BUSCAR TAREFAS CONCLUIDAS DE UM PROJETO")
     IO.puts("11- BUSCAR PROJETOS ATRASADOS")
     IO.puts("12- BUSCAR TAREFAS DE UM PROJETO")
-    IO.puts("13- VOLTAR")
+    IO.puts("13- BUSCAR RELATORIOS DE UM PROJETO")
+    IO.puts("14- VOLTAR")
     op1 = IO.gets(" ") |> String.trim
 
     case op1 do
@@ -700,7 +744,13 @@ defmodule Proj do
         nome = valida_projeto(nome)
         buscar_tarefas_proj(nome)
 
-      "13" -> main()
+      "13" ->
+        limpar_console()
+        nome = String.downcase(IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim)
+        nome = valida_projeto(nome)
+        buscar_relatorios_projeto(nome)
+
+      "14" -> main()
 
       _ -> IO.puts("Opcao invalida. Tente novamente.")
 
