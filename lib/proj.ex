@@ -26,11 +26,11 @@ defmodule Proj do
     # IO.puts("\e[2J")
     case DB.insert(habilidade) do
       {:ok, _} ->
-        IO.puts("Habilidade cadastrada com sucesso")
+        IO.puts("\nHabilidade cadastrada com sucesso\n")
         {:ok, :habilidade_criado}
 
       {:error, _} ->
-        IO.puts("Erro ao cadastrar habilidade, tente novamente")
+        IO.puts("\nErro ao cadastrar habilidade, tente novamente\n")
         {:error, :erro_habilidade}
     end
 
@@ -53,11 +53,11 @@ defmodule Proj do
 
     case DB.insert(membro) do
       {:ok, _} ->
-        IO.puts("Membro cadastrado com sucesso")
+        IO.puts("\nMembro cadastrado com sucesso\n")
         {:ok, :membro_criado}
 
       {:error, _} ->
-        IO.puts("Erro ao cadastrar membro, tente novamente")
+        IO.puts("\nErro ao cadastrar membro, tente novamente\n")
         {:error, :erro_membro}
     end
   end
@@ -620,6 +620,7 @@ defmodule Proj do
         nome_h = String.downcase(IO.gets("NOME DA HABILIDADE: ") |> String.trim)
         nome_h = valida_habilidade(nome_h)
         associar_hab_membro(nome_h, id_membro)
+        IO.puts("Habilidade atribuida com sucesso")
 
       "6" ->
         limpar_console()
@@ -798,7 +799,6 @@ defmodule Proj do
         update_tarefa_stts(id_tarefa, status)
         IO.puts("\nStatus atualizado com sucesso\n")
 
-
       "3" ->
         limpar_console()
         nome_p = IO.gets("DIGITE O NOME DO PROJETO:") |> String.trim
@@ -877,9 +877,9 @@ defmodule Proj do
         status
       _ ->
         status = IO.gets("Status invalido. Tente novamente: ") |> String.trim
-        valida_stts_p(status)
+        status = valida_stts_p(status)
+        status
     end
-    status
   end
 
   defp valida_stts_t(status) do
@@ -892,9 +892,9 @@ defmodule Proj do
         status
       _ ->
         status = IO.gets("Status invalido. Tente novamente: ") |> String.trim
-        valida_stts_t(status)
+        status = valida_stts_t(status)
+        status
     end
-    status
   end
 
   def valida_projeto(projeto) do
@@ -957,12 +957,12 @@ defmodule Proj do
         parsed_ano >= 1 do
         string
       else
-        string = IO.gets("Tarefa invalida. Tente novamente: ") |> String.trim
+        string = IO.gets("Data invalida. Tente novamente: ") |> String.trim
         string = valida_data(string)
         string
       end
     else
-      string = IO.gets("Tarefa invalida. Tente novamente: ") |> String.trim
+      string = IO.gets("Data invalida. Tente novamente: ") |> String.trim
       string = valida_data(string)
       string
     end
