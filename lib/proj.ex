@@ -6,20 +6,6 @@ defmodule Proj do
   @dialyzer {:nowarn_function, associar_hab_membro: 2}
   @dialyzer {:nowarn_function, associar_membro_projeto: 2}
 
-  @moduledoc """
-  Documentation for `Proj`.
-  """
-
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> Proj.hello()
-      :world
-
-  """
-
   def inserir_habilidade(nome) do
     habilidade = %Proj.Habilidade{nome: nome}
     # habilidade |> DB.insert()
@@ -71,6 +57,15 @@ defmodule Proj do
       |> preload(:projeto_respons)
       |> preload(:projetos)
     )
+  end
+
+  def buscar_membro_nome(id) do
+    membro_nome = DB.one(
+      Proj.Membro
+      |> select([membro], membro.nome)
+      |> where([membro], membro.id == ^id)
+    )
+    membro_nome
   end
 
   def buscar_projeto(nome) do
@@ -200,6 +195,26 @@ defmodule Proj do
       IO.puts("Nome do Projeto: #{projeto.nome} \nDescricao: #{projeto.descricao} \nData inicial: #{inverter_data(projeto.data_ini)} \nData termino prevista: #{inverter_data(projeto.data_term)} \nStatus: #{projeto.status} \nResponsavel: #{responsavel}\nMembros: #{membros} \n")
       IO.puts("")
     end)
+  end
+
+  def buscar_projeto_dados(nome) do
+    projeto = DB.one(
+      Proj.Projeto
+      |> select([projeto], projeto)
+      |> where([projeto], projeto.nome == ^nome)
+      |> preload(:membros)
+      |> preload(:documentos)
+      |> preload(:responsavel)
+    )
+    IO.puts("PROJETOS")
+    IO.puts("-------------------------")
+
+    membros = projeto.membros
+    |> Enum.map(fn membro -> Map.get(membro, :nome) |> String.trim end)
+    |> Enum.join(", ")
+    responsavel = projeto.responsavel |> Map.get(:nome) |> String.trim |> String.replace("\"", "")
+    IO.puts("Nome do Projeto: #{projeto.nome} \nDescricao: #{projeto.descricao} \nData inicial: #{inverter_data(projeto.data_ini)} \nData termino prevista: #{inverter_data(projeto.data_term)} \nStatus: #{projeto.status} \nResponsavel: #{responsavel}\nMembros: #{membros} \n")
+    IO.puts("")
   end
 
   def buscar_all_tarefas do
@@ -377,7 +392,7 @@ defmodule Proj do
     IO.puts("-------------------------")
     Enum.each(tarefas, fn tarefa ->
       responsavel = tarefa.membro_respons |> Map.get(:nome) |> String.trim |> String.replace("\"", "")
-      IO.puts("Descricao: #{tarefa.descricao} \nData inicial: #{tarefa.data_ini} \nData termino prevista: #{tarefa.data_term} \nStatus: #{tarefa.status} \nResponsavel: #{responsavel}\n")
+      IO.puts("Descricao: #{tarefa.descricao} \nData inicial: #{inverter_data(tarefa.data_ini)} \nData termino prevista: #{inverter_data(tarefa.data_term)} \nStatus: #{tarefa.status} \nResponsavel: #{responsavel}\n")
       IO.puts("")
     end)
   end
@@ -395,7 +410,6 @@ defmodule Proj do
         IO.puts("\nErro ao criar projeto, tente novamente\n")
         {:error, :erro_projeto}
     end
-
   end
 
   def inserir_tarefa(descricao, data_ini, data_term, status, id_responsavel, id_projeto) do
@@ -580,12 +594,17 @@ defmodule Proj do
         respons = buscar_membro_id(n_resp)
         inserir_projeto(nome, descric, data_ini, data_term, status, respons)
 
+        proj_id = buscar_proj_id(nome)
+        associar_membro_projeto(n_resp, proj_id)
+
       "2" ->
         limpar_console()
         IO.puts("CRIAR TAREFA")
         descric = String.downcase(IO.gets("DESCRICAO:") |> String.trim)
         data_ini = String.downcase(IO.gets("DATA INICIAL (dd-mm-yyyy)") |> String.trim)
+        data_ini = valida_data(data_ini)
         data_term = String.downcase(IO.gets("DATA DO TERMINO PREVISTO (dd-mm-yyyy): ") |> String.trim)
+        data_term = valida_data(data_term)
         status = String.downcase(IO.gets("STATUS (em andamento, concluida, pendente): ") |> String.trim)
         status = String.downcase(status)
         status = valida_stts_t(status)
