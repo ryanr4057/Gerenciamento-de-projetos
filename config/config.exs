@@ -9,4 +9,4 @@ config :proj, Proj.Repo,
   password: "",
   hostname: ""
 
-config :logger, level: :warning
+# config :logger, level: :warning

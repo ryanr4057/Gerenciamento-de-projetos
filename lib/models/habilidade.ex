@@ -4,7 +4,9 @@ defmodule Proj.Habilidade do
 
   schema "habilidades" do
     field(:nome, :string)
-    many_to_many(:membros, Proj.Membro, join_through: "habilidades_membros", on_replace: :delete)
+
+    has_many(:habilidades_membro, Proj.HabilidadeMembro)
+    many_to_many(:membros, Proj.Membro, join_through: "habilidades_membros")
   end
 
   def updatable_associations, do: [

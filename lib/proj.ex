@@ -33,6 +33,15 @@ defmodule Proj do
     )
   end
 
+  def buscar_habilidade_id(nome) do
+    hab = DB.one(
+      Proj.Habilidade
+      |> select([habilidade], habilidade.id)
+      |> where([habilidade], habilidade.nome == ^nome)
+    )
+    hab
+  end
+
   def inserir_membro(nome, funcao) do
     membro = %Proj.Membro{nome: nome, funcao: funcao}
     # membro |> DB.insert()
@@ -457,6 +466,48 @@ defmodule Proj do
     end
   end
 
+  def apagar_habilidade(habilidade) do
+    id_hab = buscar_habilidade_id(habilidade)
+    %Proj.Habilidade{id: id_hab} |> DB.delete()
+  end
+
+  def apagar_membro(membro) do
+    id_memb = buscar_membro_id(membro)
+    %Proj.Membro{id: id_memb} |> DB.delete()
+  end
+
+  def apagar_projeto(projeto) do
+    id_proj = buscar_proj_id(projeto)
+    %Proj.Projeto{id: id_proj} |> DB.delete()
+  end
+
+  def assoc_membro_proj(membro, proj)do
+    memb_id = buscar_membro_id(membro)
+    proj_id = buscar_proj_id(proj)
+
+    changeset = Proj.MembroProjeto.changeset(%Proj.MembroProjeto{}, %{membro_id: memb_id, projeto_id: proj_id})
+    case DB.insert(changeset) do
+      {:ok, _} ->
+        IO.puts("\nMembro atribuido com sucesso\n")
+      {:error, _} ->
+        IO.puts("\nErro ao atribuir o membro, tente novamente\n")
+    end
+  end
+
+  def assoc_hab_membro(habilidade,membro)do
+    hab_id = buscar_habilidade_id(habilidade)
+    memb_id = buscar_membro_id(membro)
+
+    changeset = Proj.HabilidadeMembro.changeset(%Proj.HabilidadeMembro{}, %{habilidade_id: hab_id, membro_id: memb_id})
+    case DB.insert(changeset) do
+      {:ok, _} ->
+        IO.puts("\nHabilidade atribuida com sucesso\n")
+      {:error, _} ->
+        IO.puts("\nErro ao atribuir a habilidade, tente novamente\n")
+    end
+  end
+
+
   def associar_hab_membro(nome_habilidade, id_membro) do
     habilidade = buscar_habilidade(nome_habilidade)
     params = %{
@@ -593,9 +644,7 @@ defmodule Proj do
         n_resp = valida_membro(n_resp)
         respons = buscar_membro_id(n_resp)
         inserir_projeto(nome, descric, data_ini, data_term, status, respons)
-
-        proj_id = buscar_proj_id(nome)
-        associar_membro_projeto(n_resp, proj_id)
+        assoc_membro_proj(n_resp, nome)
 
       "2" ->
         limpar_console()
@@ -635,11 +684,9 @@ defmodule Proj do
         IO.puts("ATRIBUIR HABILIDADE A MEMBRO")
         nome_m = String.downcase(IO.gets("NOME DO MEMBRO: ") |> String.trim)
         nome_m = valida_membro(nome_m)
-        id_membro = buscar_membro_id(nome_m)
         nome_h = String.downcase(IO.gets("NOME DA HABILIDADE: ") |> String.trim)
         nome_h = valida_habilidade(nome_h)
-        associar_hab_membro(nome_h, id_membro)
-        IO.puts("Habilidade atribuida com sucesso")
+        assoc_hab_membro(nome_h, nome_m)
 
       "6" ->
         limpar_console()
@@ -648,8 +695,7 @@ defmodule Proj do
         nome_m = valida_membro(nome_m)
         nome_proj = String.downcase(IO.gets("NOME DO PROJETO: ") |> String.trim)
         nome_proj = valida_projeto(nome_proj)
-        id_proj = buscar_proj_id(nome_proj)
-        associar_membro_projeto(nome_m, id_proj)
+        assoc_membro_proj(nome_m, nome_proj)
 
       "7" ->
         limpar_console()
@@ -992,6 +1038,8 @@ defmodule Proj do
       IO.puts("")
     end
   end
+
+
 
   def hello do
     :world
